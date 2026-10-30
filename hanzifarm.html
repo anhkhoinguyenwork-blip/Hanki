@@ -1107,6 +1107,8 @@ ruby.hw:hover{background:color-mix(in srgb,var(--accent) 14%,transparent)}
 .hzpop .hpr{display:flex;gap:10px;align-items:flex-start;padding:6px 0;border-top:1px solid var(--line)}.hzpop .hpm{flex:1;min-width:0}
 .hzpop .hpp{font-weight:600;margin-right:8px}.hzpop .hphv{font-style:italic;color:var(--muted)}.hzpop .hpd{color:var(--ink);line-height:1.4;margin-top:2px}
 .hzpop .hpok{color:var(--ok);padding-top:2px}.hzpop .hpn{color:var(--muted);padding:4px 0}
+/* phones: a tab label too wide for its tab is narrowed by navFit instead of cut */
+@media (max-width:860px){.nav .nlab{flex:none;width:max-content}}
 /* Đọc: a pasted text read aloud sentence by sentence */
 .rdcard{padding:16px 18px}.rdedit{display:flex;flex-direction:column;gap:10px}.rdview{background:inherit}
 #rdIn{font-family:var(--hanzi-big);font-size:19px;line-height:1.6;min-height:220px;max-height:60vh}
@@ -3601,6 +3603,24 @@ function renderView(){
   ({ today: renderToday, write: renderWrite, lookup: renderLookup, read: renderRead, deck: renderDeck, stats: renderStatsPage, sounds: renderSoundsView, practice: renderPractice, settings: renderSettings })[view]();
 }
 window.addEventListener("hashchange", go);
+/* phones: eight tabs share the bottom bar, so a label that is too wide for its tab (a wide skin font,
+   "Sentences") is drawn a little narrower instead of being cut off */
+const NAV_PHONE = matchMedia("(max-width:860px)");
+let navFitRaf = 0;
+function navFit(){
+  navFitRaf = 0;
+  document.querySelectorAll(".nav a").forEach(a => {
+    let s = a.querySelector(".nlab");
+    if (!s){ const t = [...a.childNodes].find(n => n.nodeType === 3 && n.nodeValue.trim()); if (!t) return; s = document.createElement("span"); s.className = "nlab"; a.insertBefore(s, t); s.appendChild(t); }
+    s.style.transform = "";
+    if (!NAV_PHONE.matches || !a.offsetWidth) return;
+    const cs = getComputedStyle(a), room = a.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight) - 4;   // 2px clear of each edge (Win95's bevel)
+    if (s.offsetWidth > room) s.style.transform = `scaleX(${Math.max(.7, room / s.offsetWidth).toFixed(3)})`;
+  });
+}
+navFit();
+window.addEventListener("resize", () => { if (!navFitRaf) navFitRaf = requestAnimationFrame(navFit); });
+try { NAV_PHONE.addEventListener("change", navFit); document.fonts.ready.then(navFit); document.fonts.addEventListener("loadingdone", navFit); } catch (e) {}
 const mode = () => view === "practice" ? "free" : view === "write" ? "write" : "review";
 
 function updateChrome(){
